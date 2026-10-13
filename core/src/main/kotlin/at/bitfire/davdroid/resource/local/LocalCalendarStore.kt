@@ -17,6 +17,7 @@ import androidx.core.content.contentValuesOf
 import at.bitfire.davdroid.Constants
 import at.bitfire.davdroid.accounts.AccountId
 import at.bitfire.davdroid.accounts.AndroidAccountManager
+import at.bitfire.davdroid.accounts.LegacyAccount
 import at.bitfire.davdroid.db.Collection
 import at.bitfire.davdroid.repository.AccountRepository
 import at.bitfire.davdroid.repository.DavServiceRepository
@@ -83,7 +84,7 @@ class LocalCalendarStore @Inject constructor(
 
             // Email address for scheduling. Used by the calendar provider to determine whether the
             // user is ORGANIZER/ATTENDEE for a certain event.
-            put(Calendars.OWNER_ACCOUNT, account.name)
+            put(Calendars.OWNER_ACCOUNT, ownerAccount(accountId, account))
 
             // flag as visible & syncable at creation, might be changed by user at any time
             put(Calendars.VISIBLE, 1)
@@ -119,15 +120,33 @@ class LocalCalendarStore @Inject constructor(
         localCollection: LocalCalendar,
         fromCollection: Collection
     ) {
+        val androidCalendar = localCollection.androidCalendar
         val values = valuesFromCollectionInfo(
             info = fromCollection,
             withColor = useManagedCalendarColors(accountId)
-        )
+        ).apply {
+            // also update calendars that have been created with another owner account
+            put(Calendars.OWNER_ACCOUNT, ownerAccount(accountId, androidCalendar.account))
+        }
 
         logger.log(Level.FINE, "Updating local calendar {0}: {1}", arrayOf(fromCollection.url, values))
-        val androidCalendar = localCollection.androidCalendar
         val provider = AndroidCalendarProvider(androidCalendar.account, client)
         provider.updateCalendar(androidCalendar.id, values)
+    }
+
+    /**
+     * Bay Area Sync: the account name is a user-chosen description, so it can't be used as owner account
+     * (email address for scheduling). Use the user name instead when it's an email address (which it is
+     * for the email login); otherwise fall back to the account name like DAVx⁵.
+     */
+    private fun ownerAccount(accountId: AccountId, account: Account): String {
+        val userName = try {
+            accountSettingsFactory.create(accountId).credentials().username
+        } catch (e: Exception) {
+            logger.log(Level.WARNING, "Couldn't read credentials of $account", e)
+            null
+        }
+        return userName?.takeIf { it.contains('@') } ?: account.name
     }
 
     private fun useManagedCalendarColors(accountId: AccountId): Boolean {
@@ -196,7 +215,7 @@ class LocalCalendarStore @Inject constructor(
             Calendars.ACCOUNT_NAME to newAccount.name,
             // Owner account of this calendar to be changed. Used by the calendar
             // provider to determine whether the user is ORGANIZER/ATTENDEE (usually an email address) for a certain event.
-            Calendars.OWNER_ACCOUNT to newAccount.name
+            Calendars.OWNER_ACCOUNT to ownerAccount(LegacyAccount(newAccount), newAccount)
         )
         val uri = Calendars.CONTENT_URI.asSyncAdapter(oldAccount)
         client.update(uri, values, "${Calendars.ACCOUNT_NAME}=?", arrayOf(oldAccount.name))
