@@ -8,6 +8,13 @@ is shared and the core development always takes place in davx5-ose.
 
 > **Maintenance note for agents:** Keep this file (and `core/AGENTS.md`, `synctools/AGENTS.md`) up to date. When making changes that affect the structure described here — such as adding/removing Gradle modules, renaming packages, changing the DI framework, or replacing major dependencies — update the relevant file(s) as part of the same change. Only reflect genuinely significant structural changes; don't update for routine additions like new classes or minor refactors.
 
+## Bay Area Sync fork
+
+This checkout is **Bay Area Sync**, a rebranded variant of DAVx⁵ OSE for the Bay Area Affiliates mail platform. See
+`BAYAREA.md` for its differences to DAVx⁵, build and release instructions. Changes in `:core`/`:synctools` are kept
+small and marked with "Bay Area Sync" comments to ease merging upstream; branding and variant behavior live in
+`:app-ose` (extension points like `LoginTypesProvider`, `IntroPageFactory`, `AccountsDrawerHandler`, color schemes).
+
 ## Committing and pull requests
 
 - When committing, always add a `Co-Authored-By` line to identify yourself as AI agent.
