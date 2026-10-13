@@ -60,7 +60,10 @@ Changes to this policy are published in this file; the history is visible in the
 
 ## Contact
 
-Bay Area Affiliates – **TODO: contact address / email**
+Bay Area Affiliates  
+1001 Blucher Street  
+Corpus Christi, Texas 78401  
+USA
 
 Source code: <https://github.com/aknuth/davx5-bayarea>
 
@@ -127,6 +130,9 @@ Die App ist für die geschäftliche Nutzung bestimmt und richtet sich nicht an K
 
 ## Kontakt
 
-Bay Area Affiliates – **TODO: Kontaktadresse / E-Mail**
+Bay Area Affiliates  
+1001 Blucher Street  
+Corpus Christi, Texas 78401  
+USA
 
 Quelltext: <https://github.com/aknuth/davx5-bayarea>
