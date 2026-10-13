@@ -159,6 +159,25 @@ class DavResourceFinder @AssistedInject constructor(
             }
         }
 
+        // Bay Area Sync: for email addresses, the DAV server is expected at dav.<domain> (same rule as in mailadmin).
+        // Try it before regular service discovery, so that credentials are not sent to the web server of the domain.
+        if (config.principal == null && baseURI.scheme.equals("mailto", true))
+            discoveryFQDN?.let { domain ->
+                val davHost = "dav.$domain"
+                log.info("Trying $davHost for domain $domain")
+                try {
+                    config.principal = getCurrentUserPrincipal(
+                        URLBuilder(protocol = URLProtocol.HTTPS, host = davHost).apply {
+                            encodedPath = "/.well-known/${service.wellKnownName}"
+                        }.build(),
+                        service
+                    )
+                } catch (e: Exception) {
+                    log.log(Level.FINE, "$service detection at $davHost failed", e)
+                    processException(e)
+                }
+            }
+
         // Second try: If user-given URL didn't reveal a principal, search for it (SERVICE DISCOVERY)
         if (config.principal == null)
             discoveryFQDN?.let { fqdn ->

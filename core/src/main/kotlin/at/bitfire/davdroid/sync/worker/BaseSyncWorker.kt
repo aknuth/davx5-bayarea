@@ -176,6 +176,8 @@ abstract class BaseSyncWorker(
                 }
             }
 
+            beforeSync(accountId, dataType)
+
             val settings = syncSettingsProvider.create(accountSettings)
             return doSyncWork(accountId, dataType, settings)
 
@@ -191,6 +193,13 @@ abstract class BaseSyncWorker(
             if (Build.VERSION.SDK_INT >= 31 && stopReason != WorkInfo.STOP_REASON_NOT_STOPPED)
                 logger.warning("Worker was stopped with reason: $stopReason")
         }
+    }
+
+    /**
+     * Called after the sync conditions have been checked, right before the actual synchronization.
+     */
+    protected open suspend fun beforeSync(accountId: AccountId, dataType: SyncDataType) {
+        // nothing by default
     }
 
     suspend fun doSyncWork(accountId: AccountId, dataType: SyncDataType, settings: SyncSettings): Result {

@@ -12,10 +12,14 @@ import androidx.work.WorkerParameters
 import at.bitfire.davdroid.accounts.AccountId
 import at.bitfire.davdroid.accounts.DbAccountId
 import at.bitfire.davdroid.accounts.LegacyAccount
+import at.bitfire.davdroid.db.Service
+import at.bitfire.davdroid.repository.DavServiceRepository
+import at.bitfire.davdroid.servicedetection.RefreshCollectionsWorker
 import at.bitfire.davdroid.sync.SyncDataType
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import javax.inject.Inject
 
 /**
  * Handles scheduled sync requests.
@@ -43,6 +47,23 @@ class PeriodicSyncWorker @AssistedInject constructor(
     @VisibleForTesting
     interface Factory {
         fun create(appContext: Context, workerParams: WorkerParameters): PeriodicSyncWorker
+    }
+
+    @Inject
+    lateinit var serviceRepository: DavServiceRepository
+
+    /**
+     * Bay Area Sync: refreshes the collection list on every periodic sync, so that collections which have
+     * been added on the server (for instance shared calendars) show up without user interaction.
+     */
+    override suspend fun beforeSync(accountId: AccountId, dataType: SyncDataType) {
+        val serviceType = when (dataType) {
+            SyncDataType.CONTACTS -> Service.TYPE_CARDDAV
+            SyncDataType.EVENTS, SyncDataType.TASKS -> Service.TYPE_CALDAV
+        }
+        serviceRepository.getByAccountIdAndType(accountId, serviceType)?.let { service ->
+            RefreshCollectionsWorker.enqueue(applicationContext, service.id)
+        }
     }
 
     companion object {

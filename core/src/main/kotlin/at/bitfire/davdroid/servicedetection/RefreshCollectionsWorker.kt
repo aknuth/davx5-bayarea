@@ -23,12 +23,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import at.bitfire.dav4jvm.ktor.exception.UnauthorizedException
 import at.bitfire.davdroid.R
+import at.bitfire.davdroid.db.Service
 import at.bitfire.davdroid.network.HttpClientBuilder
 import at.bitfire.davdroid.push.PushRegistrationManager
 import at.bitfire.davdroid.repository.AccountRepository
+import at.bitfire.davdroid.repository.DavCollectionRepository
 import at.bitfire.davdroid.repository.DavServiceRepository
 import at.bitfire.davdroid.servicedetection.RefreshCollectionsWorker.Companion.ARG_SERVICE_ID
+import at.bitfire.davdroid.sync.SyncDataType
 import at.bitfire.davdroid.sync.account.InvalidAccountException
+import at.bitfire.davdroid.sync.worker.SyncWorkerManager
 import at.bitfire.davdroid.ui.DebugInfoActivity
 import at.bitfire.davdroid.ui.NotificationRegistry
 import at.bitfire.davdroid.ui.account.AccountSettingsActivity
@@ -62,6 +66,7 @@ class RefreshCollectionsWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val accountRepository: AccountRepository,
+    private val collectionRepository: DavCollectionRepository,
     private val collectionsWithoutHomeSetRefresherFactory: CollectionsWithoutHomeSetRefresher.Factory,
     private val homeSetRefresherFactory: HomeSetRefresher.Factory,
     private val httpClientBuilder: HttpClientBuilder,
@@ -70,7 +75,8 @@ class RefreshCollectionsWorker @AssistedInject constructor(
     private val principalsRefresherFactory: PrincipalsRefresher.Factory,
     private val pushRegistrationManager: PushRegistrationManager,
     private val serviceRefresherFactory: ServiceRefresher.Factory,
-    private val serviceRepository: DavServiceRepository
+    private val serviceRepository: DavServiceRepository,
+    private val syncWorkerManager: SyncWorkerManager
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -150,6 +156,9 @@ class RefreshCollectionsWorker @AssistedInject constructor(
             NotificationManagerCompat.from(applicationContext)
                 .cancel(serviceId.toString(), NotificationRegistry.NOTIFY_REFRESH_COLLECTIONS)
 
+            // remember which collections are already synchronized, so that newly found ones can be synced at once
+            val syncedBefore = collectionRepository.getByServiceAndSync(serviceId).map { it.id }.toSet()
+
             // create authenticating HttpClient (credentials taken from account settings)
             httpClientBuilder
                 .fromAccount(accountId)
@@ -175,6 +184,22 @@ class RefreshCollectionsWorker @AssistedInject constructor(
                     val principalsRefresher = principalsRefresherFactory.create(service, httpClient)
                     principalsRefresher.refreshPrincipals()
                 }
+
+            // Bay Area Sync: newly found collections are preselected for sync, so synchronize them right away
+            // (otherwise they would only show up on the device after the next periodic sync)
+            val syncedAfter = collectionRepository.getByServiceAndSync(serviceId).map { it.id }.toSet()
+            if ((syncedAfter - syncedBefore).isNotEmpty()) {
+                logger.info("New collections selected for synchronization, enqueueing sync")
+                val dataTypes = when (service.type) {
+                    Service.TYPE_CARDDAV -> listOf(SyncDataType.CONTACTS)
+                    else -> listOfNotNull(
+                        SyncDataType.EVENTS,
+                        SyncDataType.TASKS.takeIf { it.currentAuthority(applicationContext) != null }
+                    )
+                }
+                for (dataType in dataTypes)
+                    syncWorkerManager.enqueueOneTime(accountId, dataType)
+            }
 
         } catch(e: InvalidAccountException) {
             logger.log(Level.SEVERE, "Invalid account", e)

@@ -21,12 +21,13 @@ class ProductIds @Inject constructor(
 
     private val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
     private val versionName = packageInfo.versionName ?: PackageInfoCompat.getLongVersionCode(packageInfo).toString()
-    val httpUserAgent = "DAVx5/$versionName (${context.packageName})"
+    // Bay Area Sync: keeps the DAVx5 token in case servers need to recognize the client
+    val httpUserAgent = "BayAreaSync/$versionName DAVx5 (${context.packageName})"
 
 
     // product IDs for iCalendar/vCard
 
-    val iCalProdId = "DAVx5/$versionName ical4j/${ical4jVersion}"
-    val vCardProdId = "+//IDN bitfire.at//DAVx5/$versionName ez-vcard/${Ezvcard.VERSION}"
+    val iCalProdId = "BayAreaSync/$versionName ical4j/${ical4jVersion}"
+    val vCardProdId = "BayAreaSync/$versionName ez-vcard/${Ezvcard.VERSION}"
 
 }

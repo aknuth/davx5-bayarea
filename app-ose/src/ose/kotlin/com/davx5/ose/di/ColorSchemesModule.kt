@@ -7,7 +7,7 @@ package com.davx5.ose.di
 import androidx.compose.material3.ColorScheme
 import at.bitfire.davdroid.di.qualifier.DarkColorScheme
 import at.bitfire.davdroid.di.qualifier.LightColorScheme
-import at.bitfire.davdroid.ui.OseTheme
+import com.davx5.ose.ui.BayAreaTheme
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,10 +19,10 @@ class ColorSchemesModule {
 
     @Provides
     @LightColorScheme
-    fun lightColorScheme(): ColorScheme = OseTheme.lightScheme
+    fun lightColorScheme(): ColorScheme = BayAreaTheme.lightScheme
 
     @Provides
     @DarkColorScheme
-    fun darkColorScheme(): ColorScheme = OseTheme.darkScheme
+    fun darkColorScheme(): ColorScheme = BayAreaTheme.darkScheme
 
 }

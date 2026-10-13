@@ -5,7 +5,7 @@
 package com.davx5.ose.di
 
 import at.bitfire.davdroid.ui.setup.LoginTypesProvider
-import at.bitfire.davdroid.ui.setup.StandardLoginTypesProvider
+import com.davx5.ose.ui.setup.BayAreaLoginTypesProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,6 +16,6 @@ import dagger.hilt.components.SingletonComponent
 interface LoginTypesProviderModule {
 
     @Binds
-    fun loginTypesProvider(impl: StandardLoginTypesProvider): LoginTypesProvider
+    fun loginTypesProvider(impl: BayAreaLoginTypesProvider): LoginTypesProvider
 
 }

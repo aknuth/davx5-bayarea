@@ -17,7 +17,7 @@ class DefaultsProvider @Inject constructor(): SettingsProvider {
     )
 
     val intDefaults = mapOf(
-        Pair(Settings.PRESELECT_COLLECTIONS, Settings.PRESELECT_COLLECTIONS_NONE),
+        Pair(Settings.PRESELECT_COLLECTIONS, Settings.PRESELECT_COLLECTIONS_ALL),      // Bay Area Sync: like iOS, sync everything that is found
         Pair(Settings.PROXY_TYPE, Settings.PROXY_TYPE_SYSTEM),
         Pair(Settings.PROXY_PORT, 9050)     // Orbot SOCKS
     )

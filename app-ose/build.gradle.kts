@@ -13,10 +13,10 @@ plugins {
 
 android {
     defaultConfig {
-        applicationId = "at.bitfire.davdroid"
+        applicationId = "com.bayareaaffiliates.sync"
 
         // versionCode and versionName are defined in the build-logic submodule (AppVersion)
-        base.archivesName = "davx5-$versionCode-$versionName"
+        base.archivesName = "bayareasync-$versionCode-$versionName"
 
         /* Android prevents having two apps installed with the same provider authority name. In that case,
         Google Play just shows a generic "Can't install DAVx5" message. So we derive the authority names
@@ -30,6 +30,11 @@ android {
         so that code using getString(R.string.webdav_authority) etc. gets the correct authority. */
         resValue("string", "webdav_authority", webdavAuthority)
         resValue("string", "authority_debug_provider", debugInfoAuthority)
+
+        /* Bay Area Sync: own account types, so that the app can be installed beside DAVx⁵ (two apps
+        must not declare the same account type) */
+        resValue("string", "account_type", applicationId!!)
+        resValue("string", "account_type_address_book", "${applicationId}.address_book")
 
         // Currently no instrumentation tests for app-ose, so no testInstrumentationRunner
     }
@@ -123,6 +128,7 @@ dependencies {
     // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.materialIconsExtended)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.ui.toolingPreview)
 

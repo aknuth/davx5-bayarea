@@ -5,7 +5,7 @@
 package com.davx5.ose.di
 
 import at.bitfire.davdroid.ui.AccountsDrawerHandler
-import at.bitfire.davdroid.ui.OseAccountsDrawerHandler
+import com.davx5.ose.ui.BayAreaAccountsDrawerHandler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -15,5 +15,5 @@ import dagger.hilt.android.components.ActivityComponent
 @InstallIn(ActivityComponent::class)
 interface AccountsDrawerHandlerModule {
     @Binds
-    fun accountsDrawerHandler(impl: OseAccountsDrawerHandler): AccountsDrawerHandler
+    fun accountsDrawerHandler(impl: BayAreaAccountsDrawerHandler): AccountsDrawerHandler
 }

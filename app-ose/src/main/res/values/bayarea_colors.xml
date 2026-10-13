@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
+  -->
+
+<resources>
+    <!-- Bay Area Sync: overrides the DAVx⁵ green of :core -->
+    <color name="primaryColor">#1E3FE0</color>
+    <color name="bayarea_launcher_background">#FFFFFF</color>
+</resources>
