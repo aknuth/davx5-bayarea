@@ -82,6 +82,8 @@ class RefreshCollectionsWorker @AssistedInject constructor(
     companion object {
 
         const val ARG_SERVICE_ID = "serviceId"
+        /** whether the refresh runs in the background (from a periodic sync) → no error notifications */
+        const val ARG_BACKGROUND = "background"
         const val WORKER_TAG = "refreshCollectionsWorker"
 
         /**
@@ -103,10 +105,11 @@ class RefreshCollectionsWorker @AssistedInject constructor(
          *
          * @throws IllegalArgumentException when there's no service with this ID
          */
-        fun enqueue(context: Context, serviceId: Long): Pair<String, Operation> {
+        fun enqueue(context: Context, serviceId: Long, background: Boolean = false): Pair<String, Operation> {
             val name = workerName(serviceId)
             val arguments = Data.Builder()
                 .putLong(ARG_SERVICE_ID, serviceId)
+                .putBoolean(ARG_BACKGROUND, background)
                 .build()
             val workRequest = OneTimeWorkRequestBuilder<RefreshCollectionsWorker>()
                 .addTag(name)
@@ -140,6 +143,7 @@ class RefreshCollectionsWorker @AssistedInject constructor(
     }
 
     private val serviceId: Long = inputData.getLong(ARG_SERVICE_ID, -1)
+    private val background: Boolean = inputData.getBoolean(ARG_BACKGROUND, false)
 
     override suspend fun doWork(): Result {
         val service = serviceRepository.get(serviceId)
@@ -149,15 +153,16 @@ class RefreshCollectionsWorker @AssistedInject constructor(
         }
 
         val accountId = accountRepository.getAccountIdFromName(service.accountName)
+
+        // remember which collections are already synchronized, so that newly found ones can be synced at once
+        val syncedBefore = collectionRepository.getIdsByServiceAndSync(serviceId)
+
         try {
             logger.log(Level.INFO, "Refreshing {0} collections of service #{1}", arrayOf(service.type, service))
 
             // cancel previous notification
             NotificationManagerCompat.from(applicationContext)
                 .cancel(serviceId.toString(), NotificationRegistry.NOTIFY_REFRESH_COLLECTIONS)
-
-            // remember which collections are already synchronized, so that newly found ones can be synced at once
-            val syncedBefore = collectionRepository.getByServiceAndSync(serviceId).map { it.id }.toSet()
 
             // create authenticating HttpClient (credentials taken from account settings)
             httpClientBuilder
@@ -185,21 +190,6 @@ class RefreshCollectionsWorker @AssistedInject constructor(
                     principalsRefresher.refreshPrincipals()
                 }
 
-            // Bay Area Sync: newly found collections are preselected for sync, so synchronize them right away
-            // (otherwise they would only show up on the device after the next periodic sync)
-            val syncedAfter = collectionRepository.getByServiceAndSync(serviceId).map { it.id }.toSet()
-            if ((syncedAfter - syncedBefore).isNotEmpty()) {
-                logger.info("New collections selected for synchronization, enqueueing sync")
-                val dataTypes = when (service.type) {
-                    Service.TYPE_CARDDAV -> listOf(SyncDataType.CONTACTS)
-                    else -> listOfNotNull(
-                        SyncDataType.EVENTS,
-                        SyncDataType.TASKS.takeIf { it.currentAuthority(applicationContext) != null }
-                    )
-                }
-                for (dataType in dataTypes)
-                    syncWorkerManager.enqueueOneTime(accountId, dataType)
-            }
 
         } catch(e: InvalidAccountException) {
             logger.log(Level.SEVERE, "Invalid account", e)
@@ -232,6 +222,25 @@ class RefreshCollectionsWorker @AssistedInject constructor(
             return Result.failure()
         }
 
+        // Bay Area Sync: newly found collections are preselected for sync, so synchronize them right away
+        // (otherwise they would only show up on the device after the next periodic sync)
+        if ((collectionRepository.getIdsByServiceAndSync(serviceId) - syncedBefore).isNotEmpty()) {
+            logger.info("New collections selected for synchronization, enqueueing sync")
+            val dataTypes = when (service.type) {
+                Service.TYPE_CARDDAV -> listOf(SyncDataType.CONTACTS)
+                else -> listOfNotNull(
+                    SyncDataType.EVENTS,
+                    SyncDataType.TASKS.takeIf { it.currentAuthority(applicationContext) != null }
+                )
+            }
+            try {
+                for (dataType in dataTypes)
+                    syncWorkerManager.enqueueOneTime(accountId, dataType)
+            } catch (e: Exception) {
+                logger.log(Level.WARNING, "Couldn't enqueue sync of new collections", e)
+            }
+        }
+
         // update push registrations
         pushRegistrationManager.update(serviceId)
 
@@ -256,6 +265,12 @@ class RefreshCollectionsWorker @AssistedInject constructor(
     }
 
     private fun notifyRefreshError(accountName: String, contentText: String, contentIntent: Intent) {
+        if (background) {
+            // Bay Area Sync: refreshes from periodic syncs shouldn't notify about (usually temporary) errors;
+            // the sync itself notifies about persistent problems like failed authentication
+            logger.info("Not notifying about error of background refresh")
+            return
+        }
         notificationRegistry.notifyIfPossible(NotificationRegistry.NOTIFY_REFRESH_COLLECTIONS, tag = serviceId.toString()) {
             NotificationCompat.Builder(applicationContext, notificationRegistry.CHANNEL_GENERAL)
                 .setSmallIcon(R.drawable.ic_sync_problem_notify)

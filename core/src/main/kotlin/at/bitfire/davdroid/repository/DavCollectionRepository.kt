@@ -230,6 +230,8 @@ class DavCollectionRepository @Inject constructor(
 
     fun getByServiceAndSync(serviceId: Long) = dao.getByServiceAndSyncBlocking(serviceId)
 
+    suspend fun getIdsByServiceAndSync(serviceId: Long): Set<Long> = dao.getIdsByServiceAndSync(serviceId).toSet()
+
     fun getSyncCalendars(serviceId: Long) = dao.getSyncCalendarsBlocking(serviceId)
 
     fun getSyncJtxCollections(serviceId: Long) = dao.getSyncJtxCollectionsBlocking(serviceId)

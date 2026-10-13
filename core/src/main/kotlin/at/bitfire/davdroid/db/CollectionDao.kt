@@ -69,6 +69,9 @@ interface CollectionDao {
     @Query("SELECT * FROM collection WHERE serviceId=:serviceId AND sync")
     fun getByServiceAndSyncBlocking(serviceId: Long): List<Collection>
 
+    @Query("SELECT id FROM collection WHERE serviceId=:serviceId AND sync")
+    suspend fun getIdsByServiceAndSync(serviceId: Long): List<Long>
+
     @Query("SELECT collection.* FROM collection, homeset WHERE collection.serviceId=:serviceId AND type=:type AND homeSetId=homeset.id AND homeset.personal ORDER BY collection.displayName COLLATE NOCASE, collection.url COLLATE NOCASE")
     fun pagePersonalByServiceAndType(serviceId: Long, @CollectionType type: String): PagingSource<Int, Collection>
 

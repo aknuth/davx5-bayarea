@@ -22,7 +22,6 @@ android {
         versionCode = 500000000
         versionName = "5.0.0"
 
-        // versionCode and versionName are defined in the build-logic submodule (AppVersion)
         base.archivesName = "bayareasync-$versionCode-$versionName"
 
         /* Android prevents having two apps installed with the same provider authority name. In that case,
@@ -97,11 +96,14 @@ android {
         )
         if (signingProperties.exists()) {
             val props = Properties().apply { signingProperties.inputStream().use { load(it) } }
+            fun property(key: String): String =
+                props.getProperty(key) ?: throw GradleException("$key missing in $signingProperties")
             create("upload") {
-                storeFile = file(props.getProperty("storeFile"))
-                storePassword = props.getProperty("storePassword")
-                keyAlias = props.getProperty("keyAlias")
-                keyPassword = props.getProperty("keyPassword")
+                // relative paths are relative to the properties file
+                storeFile = signingProperties.parentFile.resolve(property("storeFile"))
+                storePassword = property("storePassword")
+                keyAlias = property("keyAlias")
+                keyPassword = property("keyPassword")
             }
         }
     }
