@@ -6,6 +6,12 @@
         xmlns:tools="http://schemas.android.com/tools"
         android:installLocation="internalOnly">
 
+    <!-- Bay Area Sync: no location permissions (only used by DAVx⁵ to restrict sync to certain WiFi names);
+    avoids the Google Play declaration for background location -->
+    <uses-permission-sdk-23 android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove"/>
+    <uses-permission-sdk-23 android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove"/>
+    <uses-permission-sdk-23 android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:node="remove"/>
+
     <application android:name=".App">
 
         <!-- Required for Hilt/WorkManager integration. See

@@ -2,6 +2,8 @@
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  */
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
@@ -14,6 +16,11 @@ plugins {
 android {
     defaultConfig {
         applicationId = "com.bayareaaffiliates.sync"
+
+        // Bay Area Sync has its own versioning (same major version as the Outlook plugin). Overrides the
+        // DAVx⁵ version from build-logic (AppVersion), version code scheme is the same: MmmppIIII
+        versionCode = 500000000
+        versionName = "5.0.0"
 
         // versionCode and versionName are defined in the build-logic submodule (AppVersion)
         base.archivesName = "bayareasync-$versionCode-$versionName"
@@ -51,7 +58,6 @@ android {
     productFlavors {
         create("ose") {
             dimension = "distribution"
-            versionNameSuffix = "-ose"
         }
     }
 
@@ -82,11 +88,21 @@ android {
     }
 
     signingConfigs {
-        create("bitfire") {
-            storeFile = file(System.getenv("ANDROID_KEYSTORE") ?: "/dev/null")
-            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        /* Bay Area Sync: upload key for Google Play (Play App Signing). The key and its passwords are not
+        in the repository, but in a properties file (keys: storeFile, storePassword, keyAlias, keyPassword),
+        by default ~/.android-keys/bayareasync-upload.properties. If it doesn't exist, release builds are unsigned. */
+        val signingProperties = file(
+            System.getenv("BAYAREA_SIGNING_PROPERTIES")
+                ?: "${System.getProperty("user.home")}/.android-keys/bayareasync-upload.properties"
+        )
+        if (signingProperties.exists()) {
+            val props = Properties().apply { signingProperties.inputStream().use { load(it) } }
+            create("upload") {
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
         }
     }
 
@@ -99,7 +115,7 @@ android {
 
             // Must be after signingConfigs {} block. Uncomment following line to test release build with debug signing key:
             // signingConfig = signingConfigs.getByName("debug")
-            signingConfig = signingConfigs.findByName("bitfire")
+            signingConfig = signingConfigs.findByName("upload")
         }
     }
 }

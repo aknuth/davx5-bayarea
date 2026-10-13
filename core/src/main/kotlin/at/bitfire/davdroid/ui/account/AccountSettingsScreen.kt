@@ -4,8 +4,10 @@
 
 package at.bitfire.davdroid.ui.account
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.security.KeyChain
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.StringRes
@@ -424,8 +426,19 @@ fun SyncSettings(
             onCheckedChange = onUpdateSyncOnlyOnWifi
         )
 
+        // The SSID restriction requires location permissions, which may have been removed from the manifest
+        // by an app variant (Bay Area Sync does so to avoid the Google Play background location declaration).
+        val context = LocalContext.current
+        val inspectionMode = LocalInspectionMode.current
+        val ssidRestrictionAvailable = remember {
+            inspectionMode || context.packageManager
+                .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+                .requestedPermissions
+                ?.contains(Manifest.permission.ACCESS_FINE_LOCATION) == true
+        }
+
         var showWifiOnlySsidsDialog by remember { mutableStateOf(false) }
-        Setting(
+        if (ssidRestrictionAvailable) Setting(
             icon = null,
             name = stringResource(R.string.settings_sync_wifi_only_ssids),
             enabled = syncOnlyOnWifi,
@@ -452,7 +465,7 @@ fun SyncSettings(
                 onDismiss = { showWifiOnlySsidsDialog = false }
             )
 
-        if (LocalInspectionMode.current || onlyOnSsids != null)
+        if (inspectionMode || ssidRestrictionAvailable && onlyOnSsids != null)
             ActionCard(
                 icon = if (!canAccessWifiSsid) Icons.Default.SyncProblem else Icons.Default.Info,
                 actionText = stringResource(R.string.settings_sync_wifi_only_ssids_permissions_action),
