@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.lang.AutoCloseable
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Wraps a [ContentProviderClient] to throw [LocalStorageException] instead of [android.os.RemoteException].
@@ -192,10 +193,15 @@ class LocalStorageClient(
 
 /**
  * Wraps [RemoteException] in a [LocalStorageException].
+ *
+ * [CancellationException]s are passed through: they're not errors, but used for coroutine cancellation
+ * and for aborting flows (for instance by `firstOrNull()` when [block] emits into a flow).
  */
 internal inline fun <T> runWrappingRemoteException(block: () -> T): T {
     return try {
         block()
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: RuntimeException) {
         throwWrappedLocalStorageException(e)
     } catch (e: RemoteException) {
