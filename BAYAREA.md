@@ -5,7 +5,7 @@ Bay Area Sync is a CalDAV/CardDAV sync app for the mail platform of Bay Area Aff
 description – all calendars and address books (own ones, shared ones and the global address lists of their company)
 are synchronized without further interaction.
 
-Privacy policy: [PRIVACY.md](PRIVACY.md)
+Privacy policy: [PRIVACY.md](PRIVACY.md) · Installation guide for users: [INSTALL.md](INSTALL.md)
 
 ## Differences to DAVx⁵
 
@@ -52,9 +52,14 @@ Requirements: Android SDK (`local.properties` with `sdk.dir`), JDK 21 for the Gr
    keyPassword=…
    ```
 
-   Keep a backup of both files. Google Play keeps the actual app signing key (Play App Signing); a lost upload key can
-   be reset via the Play Console.
+   Keep a backup of both files. **This key also signs the APKs distributed via GitHub.** So that those installations
+   can later be updated from Google Play, choose *"Use your own app signing key"* when setting up Play App Signing
+   and upload this key (with Google's PEPK tool). If Google generated a new key instead, users would have to uninstall
+   the GitHub version first.
 3. Upload `app-ose/build/outputs/bundle/oseRelease/*.aab` to the Play Console.
+4. GitHub release (direct download, see [INSTALL.md](INSTALL.md)): build `./gradlew :app-ose:assembleOseRelease`,
+   tag `vX.Y.Z` and attach the APK **as `BayAreaSync.apk`** – the download link and QR code point to
+   `releases/latest/download/BayAreaSync.apk`.
 
 ## Updating from DAVx⁵
 
